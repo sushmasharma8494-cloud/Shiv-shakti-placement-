@@ -32,7 +32,7 @@ workflows:
       - name: Fix Java and Kotlin target
         script: |
           set -e
-          python3 -c 'import os; p=os.path.join(os.environ["CM_BUILD_DIR"],"project","app","build.gradle.kts"); s=open(p).read(); marker="android {"; insert="\n    compileOptions {\n        sourceCompatibility = JavaVersion.VERSION_17\n        targetCompatibility = JavaVersion.VERSION_17\n    }\n    kotlinOptions {\n        jvmTarget = \"17\"\n    }"; s=s.replace(marker,marker+insert,1) if "jvmTarget = \"17\"" not in s else s; open(p,"w").write(s)'
+          python3 -c 'import os; p=os.path.join(os.environ["CM_BUILD_DIR"],"project","app","build.gradle.kts"); s=open(p).read(); marker="android {"; insert="\n    compileOptions {\n        sourceCompatibility = JavaVersion.VERSION_17\n        targetCompatibility = JavaVersion.VERSION_17\n    }\n    kotlinOptions {\n        jvmTarget = \"17\"\n    }\n"; s=s.replace(marker,marker+insert,1); open(p,"w").write(s)'
 
       - name: Install Gradle 8.11.1
         script: |
