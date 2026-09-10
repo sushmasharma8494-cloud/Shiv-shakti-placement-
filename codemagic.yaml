@@ -1,0 +1,25 @@
+workflows:
+  android-debug:
+    name: Shiv Shakti Placement APK
+    max_build_duration: 120
+    instance_type: linux_x2
+    scripts:
+      - name: Unpack Android project
+        script: |
+          rm -rf project
+          mkdir -p project
+          unzip -q Shiv_Shakti_Placement_Online_Build.zip -d project
+      - name: Set Android SDK location
+        script: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/project/local.properties"
+      - name: Install Gradle 8.11.1
+        script: |
+          cd "$CM_BUILD_DIR"
+          curl -L --fail --silent --show-error             https://services.gradle.org/distributions/gradle-8.11.1-bin.zip             -o gradle.zip
+          unzip -q gradle.zip
+      - name: Build Android debug APK
+        script: |
+          cd "$CM_BUILD_DIR/project"
+          "$CM_BUILD_DIR/gradle-8.11.1/bin/gradle" assembleDebug --no-daemon
+    artifacts:
+      - project/app/build/outputs/apk/debug/*.apk
