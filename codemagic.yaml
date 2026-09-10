@@ -9,7 +9,9 @@ workflows:
         script: |
           rm -rf project
           mkdir -p project
-          unzip -q Shiv_Shakti_Placement_Online_Build.zip -d temp cp -R temp/Project/ShivShaktiPlacementLogin/. project/rm -rf temp
+          unzip -q Shiv_Shakti_Placement_Online_Build.zip -d temp 
+          cp -R temp/Project/ShivShaktiPlacementLogin/. project/
+          rm -rf temp
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/project/local.properties"
           echo "android.useAndroidX=true" > "$CM_BUILD_DIR/project/gradle.properties"
