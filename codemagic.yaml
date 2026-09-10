@@ -13,7 +13,21 @@ workflows:
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/project/local.properties"
           echo "android.useAndroidX=true" >> "$CM_BUILD_DIR/project/gradle.properties"
-      - name: Install Gradle 8.11.1
+           - name: Fix Java and Kotlin target
+        script: |
+          python3 - <<'PY'
+          p = "$CM_BUILD_DIR/project/app/build.gradle.kts"
+          s = open(p).read()
+          s = s.replace('compileSdk = 35', '''compileSdk = 35
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = "17"
+    }''', 1)
+          open(p, 'w').write(s)
+          PY - name: Install Gradle 8.11.1
         script: |
           cd "$CM_BUILD_DIR"
           curl -L --fail --silent --show-error             https://services.gradle.org/distributions/gradle-8.11.1-bin.zip             -o gradle.zip
