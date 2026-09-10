@@ -3,38 +3,63 @@ workflows:
     name: Shiv Shakti Placement APK
     max_build_duration: 120
     instance_type: mac_mini_m2
+
     scripts:
       - name: Unpack Android project
         script: |
           rm -rf project
           mkdir -p project
           unzip -q Shiv_Shakti_Placement_Online_Build.zip -d project
-      - name: Set Android SDK location
+
+      - name: Set Android SDK and AndroidX
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/project/local.properties"
           echo "android.useAndroidX=true" >> "$CM_BUILD_DIR/project/gradle.properties"
-           - name: Fix Java and Kotlin target
+
+      - name: Fix Java and Kotlin target
         script: |
           python3 - <<'PY'
-          p = "$CM_BUILD_DIR/project/app/build.gradle.kts"
+          import os
+
+          p = os.path.join(
+              os.environ["CM_BUILD_DIR"],
+              "project",
+              "app",
+              "build.gradle.kts"
+          )
+
           s = open(p).read()
-          s = s.replace('compileSdk = 35', '''compileSdk = 35
+
+          old = "compileSdk = 35"
+          new = """compileSdk = 35
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
     kotlinOptions {
         jvmTarget = "17"
-    }''', 1)
-          open(p, 'w').write(s)
-          PY - name: Install Gradle 8.11.1
+    }"""
+
+          if old in s and "jvmTarget = \"17\"" not in s:
+              s = s.replace(old, new, 1)
+
+          open(p, "w").write(s)
+          PY
+
+      - name: Install Gradle 8.11.1
         script: |
           cd "$CM_BUILD_DIR"
-          curl -L --fail --silent --show-error             https://services.gradle.org/distributions/gradle-8.11.1-bin.zip             -o gradle.zip
+          curl -L --fail --silent --show-error \
+            https://services.gradle.org/distributions/gradle-8.11.1-bin.zip \
+            -o gradle.zip
           unzip -q gradle.zip
+
       - name: Build Android debug APK
         script: |
           cd "$CM_BUILD_DIR/project"
           "$CM_BUILD_DIR/gradle-8.11.1/bin/gradle" assembleDebug --no-daemon
+
     artifacts:
       - project/app/build/outputs/apk/debug/*.apk
