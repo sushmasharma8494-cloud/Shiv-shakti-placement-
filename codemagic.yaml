@@ -3,17 +3,49 @@ workflows:
     name: Shiv Shakti Placement APK
     max_build_duration: 120
     instance_type: mac_mini_m2
+
     scripts:
       - name: Unpack Android project
         script: |
           set -e
           rm -rf "$CM_BUILD_DIR/project"
           mkdir -p "$CM_BUILD_DIR/project"
-          ZIP_FILE=$(find "$CM_BUILD_DIR" -maxdepth 1 -type f -name '*.zip' | head -n 1)
-          if [ -z "$ZIP_FILE" ]; then
-              echo "ERROR: No ZIP file found in CM_BUILD_DIR"
-              exit 1
+          ZIP_FILE="$CM_BUILD_DIR/Shiv_Shakti_Placement_Online_Build.zip"
+          if [ ! -f "$ZIP_FILE" ]; then
+            echo "ERROR: Android project ZIP not found"
+            ls -la "$CM_BUILD_DIR"
+            exit 1
           fi
-          echo "Using ZIP: $ZIP_FILE"
-          unzip -q "$ZIP_FILE" -d "$CM_BUILD_DIR/project"
+          unzip -q -o "$ZIP_FILE" -d "$CM_BUILD_DIR/project"
           test -f "$CM_BUILD_DIR/project/settings.gradle.kts"
+          test -f "$CM_BUILD_DIR/project/app/build.gradle.kts"
+
+      - name: Prepare Android build
+        script: |
+          set -e
+          printf 'sdk.dir=%s\n' "$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/project/local.properties"
+          printf 'android.useAndroidX=true\nandroid.enableJetifier=true\n' > "$CM_BUILD_DIR/project/gradle.properties"
+          export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+          export PATH="$JAVA_HOME/bin:$PATH"
+          java -version
+
+      - name: Fix Java and Kotlin target
+        script: |
+          set -e
+          python3 -c 'import os; p=os.path.join(os.environ["CM_BUILD_DIR"],"project","app","build.gradle.kts"); s=open(p).read(); marker="android {"; insert="\n    compileOptions {\n        sourceCompatibility = JavaVersion.VERSION_17\n        targetCompatibility = JavaVersion.VERSION_17\n    }\n    kotlinOptions {\n        jvmTarget = \"17\"\n    }"; s=s.replace(marker,marker+insert,1) if "jvmTarget = \"17\"" not in s else s; open(p,"w").write(s)'
+
+      - name: Install Gradle 8.11.1
+        script: |
+          set -e
+          cd "$CM_BUILD_DIR"
+          curl -L --fail --silent --show-error https://services.gradle.org/distributions/gradle-8.11.1-bin.zip -o gradle.zip
+          unzip -q -o gradle.zip
+
+      - name: Build Android debug APK
+        script: |
+          set -e
+          cd "$CM_BUILD_DIR/project"
+          "$CM_BUILD_DIR/gradle-8.11.1/bin/gradle" assembleDebug --no-daemon
+
+    artifacts:
+      - project/app/build/outputs/apk/debug/*.apk
